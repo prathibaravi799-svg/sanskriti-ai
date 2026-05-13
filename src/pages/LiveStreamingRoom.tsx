@@ -4,7 +4,7 @@ import {
   Video, Mic, MicOff, VideoOff, PhoneOff, 
   MessageSquare, Users, ScreenShare, Settings,
   Hand, Smile, MoreVertical, Radio, Play,
-  Share2, Heart, MessageCircle, Gift
+  Share2, Heart, MessageCircle, Gift, Layers
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 

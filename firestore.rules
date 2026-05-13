@@ -2,8 +2,15 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // Default deny
+    /*
     match /{document=**} {
       allow read, write: if false;
+    }
+    */
+
+    // Allow test connection
+    match /test/connection {
+      allow read: if true;
     }
 
     // Helper functions
@@ -31,13 +38,13 @@ service cloud.firestore {
     // Artist Profile Rules
     match /artists/{artistId} {
       allow get, list: if true;
-      allow create, update: if isSignedIn() && (isOwner(artistId) || request.auth.token.admin == true);
+      allow create, update: if isSignedIn() && (isOwner(artistId) || (isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid))));
     }
 
     // Product Rules
     match /products/{productId} {
-      allow get, list: if true;
-      allow create, update, delete: if isSignedIn() && request.auth.token.admin == true;
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
     }
 
     // Booking Rules
@@ -56,61 +63,69 @@ service cloud.firestore {
 
     // Live Sessions
     match /liveSessions/{sessionId} {
-      allow get, list: if true;
-      allow create, update, delete: if isSignedIn() && (isOwner(incoming().artistId) || request.auth.token.admin == true);
+      allow read: if true;
+      allow create, update, delete: if isSignedIn() && (isOwner(incoming().artistId) || isAdmin());
     }
 
     // Videos
     match /videos/{videoId} {
-      allow get, list: if true;
-      allow create, update, delete: if isSignedIn() && (isOwner(incoming().artistId) || request.auth.token.admin == true);
+      allow read: if true;
+      allow create, update, delete: if isSignedIn() && (isOwner(incoming().artistId) || isAdmin());
     }
 
     // Reviews
     match /reviews/{reviewId} {
-      allow get, list: if true;
+      allow read: if true;
       allow create: if isSignedIn() && isOwner(incoming().userId);
       allow update, delete: if isSignedIn() && isOwner(existing().userId);
     }
 
     // Achievements
     match /achievements/{achievementId} {
-      allow get, list: if isSignedIn() && isOwner(resource.data.userId);
-      allow create, update, delete: if isSignedIn() && request.auth.token.admin == true;
+      allow read: if isSignedIn() && isOwner(resource.data.userId);
+      allow create, update, delete: if isAdmin();
     }
 
     // Chats
     match /chats/{chatId} {
-      allow get, list: if isSignedIn() && request.auth.uid in resource.data.participants;
-      allow create: if isSignedIn() && request.auth.uid in incoming().participants;
-      allow update: if isSignedIn() && request.auth.uid in existing().participants;
+      allow read: if isSignedIn() && (request.auth.uid in resource.data.participants);
+      allow create: if isSignedIn() && (request.auth.uid in incoming().participants);
+      allow update: if isSignedIn() && (request.auth.uid in existing().participants);
     }
 
     // Folklore Stories
-    match /folklore/{storyId} {
-      allow get, list: if true;
+    match /stories/{storyId} {
+      allow read: if true;
       allow create: if isSignedIn() && isOwner(incoming().creatorId);
       allow update, delete: if isSignedIn() && isOwner(existing().creatorId);
     }
 
     // Chapters
     match /chapters/{chapterId} {
-      allow get, list: if true;
-      allow create, update, delete: if isSignedIn(); // Simplified for now, should check story creator
+      allow read: if true;
+      allow create, update, delete: if isSignedIn(); // Simplified for now
     }
 
     // Streams
     match /streams/{streamId} {
-      allow get, list: if true;
+      allow read: if true;
       allow create: if isSignedIn() && isOwner(incoming().creatorId);
       allow update: if isSignedIn() && isOwner(existing().creatorId);
     }
 
     // Comments
     match /comments/{commentId} {
-      allow get, list: if true;
+      allow read: if true;
       allow create: if isSignedIn() && isOwner(incoming().userId);
       allow update, delete: if isSignedIn() && isOwner(existing().userId);
+    }
+
+    // Admin check helper
+    function isAdmin() {
+      // In this applet, we don't have a specific admin collection yet,
+      // but we can add one or use a specific email if needed.
+      // For now, we'll allow a specific hardcoded email as a bypass or simply check a collection
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
   }
 }

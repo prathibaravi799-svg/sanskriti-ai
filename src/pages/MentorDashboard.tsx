@@ -1,16 +1,33 @@
-import React from 'react';
-import { motion } from 'motion/react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, BarChart3, Calendar, Video, 
   Plus, Settings, DollarSign, MessageCircle, 
-  Play, BookOpen, Radio, Sparkles
+  Play, BookOpen, Radio, Sparkles, RefreshCcw, Check
 } from 'lucide-react';
 import { useUser } from '../context/UserContext';
 import { useNavigate } from 'react-router-dom';
+import { seedMentors } from '../services/dataSeeder';
 
 export default function MentorDashboard() {
   const { user } = useUser();
   const navigate = useNavigate();
+  const [isSeeding, setIsSeeding] = useState(false);
+  const [seedStatus, setSeedStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+  const handleSyncData = async () => {
+    setIsSeeding(true);
+    try {
+      await seedMentors();
+      setSeedStatus('success');
+      setTimeout(() => setSeedStatus('idle'), 3000);
+    } catch (error) {
+      setSeedStatus('error');
+      setTimeout(() => setSeedStatus('idle'), 3000);
+    } finally {
+      setIsSeeding(false);
+    }
+  };
 
   if (!user) {
     return (
@@ -34,7 +51,21 @@ export default function MentorDashboard() {
           </h1>
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-4 justify-end">
+          <button 
+             onClick={handleSyncData}
+             disabled={isSeeding}
+             className={`flex items-center gap-3 px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl transition-all ${
+               seedStatus === 'success' ? 'bg-emerald-500 text-white' : 
+               seedStatus === 'error' ? 'bg-rose-500 text-white' :
+               'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:scale-105'
+             }`}
+          >
+             {isSeeding ? <RefreshCcw className="w-4 h-4 animate-spin" /> : 
+              seedStatus === 'success' ? <Check className="w-4 h-4" /> : 
+              <RefreshCcw className="w-4 h-4" />}
+             {isSeeding ? 'Syncing...' : seedStatus === 'success' ? 'Cloud Synced' : 'Sync Cloud Data'}
+          </button>
           <button 
              onClick={() => navigate('/creator-dashboard')}
              className="flex items-center gap-3 px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl hover:scale-105 transition-all"
@@ -54,9 +85,6 @@ export default function MentorDashboard() {
              className="flex items-center gap-3 px-8 py-4 bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/40 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:text-slate-900 dark:hover:text-white transition-all"
           >
              Back to Learner View
-          </button>
-          <button className="p-4 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl text-slate-400">
-             <Settings className="w-6 h-6" />
           </button>
         </div>
       </section>

@@ -17,6 +17,7 @@ import CreatorDashboard from './pages/CreatorDashboard';
 import StoryViewer from './pages/StoryViewer';
 import MediaLibrary from './pages/MediaLibrary';
 import AIContentGenerator from './pages/AIContentGenerator';
+import VideoEditor from './pages/VideoEditor';
 import LiveStreamingRoom from './pages/LiveStreamingRoom';
 import { LanguageProvider } from './context/LanguageContext';
 import { UserProvider } from './context/UserContext';
@@ -48,6 +49,7 @@ export default function App() {
                 <Route path="/creator-dashboard" element={<CreatorDashboard />} />
                 <Route path="/creator/vault" element={<MediaLibrary />} />
                 <Route path="/creator/ai-lab" element={<AIContentGenerator />} />
+                <Route path="/creator/video-editor" element={<VideoEditor />} />
                 <Route path="/live/studio" element={<LiveStreamingRoom />} />
               </Routes>
             </main>

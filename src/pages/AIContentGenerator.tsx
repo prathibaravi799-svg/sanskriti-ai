@@ -1,27 +1,52 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Sparkles, Send, Video, Image as ImageIcon, 
   Type, Languages, Subtitles, Wand2, 
   RefreshCw, Copy, Check, Download,
-  Volume2, Music
+  Volume2, Music, FileText, Upload, X, Globe
 } from 'lucide-react';
 
 type GenType = 'script' | 'thumbnail' | 'translation' | 'subtitles' | 'voiceover';
+
+const INDIAN_LANGUAGES = [
+  'Hindi', 'Tamil', 'Telugu', 'Kannada', 'Malayalam', 
+  'Marathi', 'Bengali', 'Odia', 'Gujarati', 'Punjabi', 
+  'Assamese', 'Konkani', 'Sanskrit'
+];
 
 export default function AIContentGenerator() {
   const [activeType, setActiveType] = useState<GenType>('script');
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState('Hindi');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleGenerate = () => {
     setIsGenerating(true);
-    // Mock generation
+    setResult(null);
+    
+    // Mock generation based on type
     setTimeout(() => {
       setIsGenerating(false);
-      setResult("The Whispering Banyan of Mysore is not just a tree; it's a living archive. Veera, a curious boy, discovers that its roots hold the memories of generations...");
-    }, 2000);
+      
+      if (activeType === 'subtitles') {
+        setResult(`[00:01.00] In the heart of the village... (${selectedLanguage})\n[00:04.50] The traditions were passed down... (${selectedLanguage})\n[00:08.20] From elders to the youth... (${selectedLanguage})`);
+      } else if (activeType === 'script') {
+        setResult("The Whispering Banyan of Mysore is not just a tree; it's a living archive. Veera, a curious boy, discovers that its roots hold the memories of generations...");
+      } else {
+        setResult("Mock AI generation completed for " + activeType + " in " + selectedLanguage);
+      }
+    }, 2500);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUploadedFile(file);
+    }
   };
 
   const tools: { id: GenType; label: string; icon: any; color: string }[] = [
@@ -50,7 +75,10 @@ export default function AIContentGenerator() {
              {tools.map((tool) => (
                 <button
                   key={tool.id}
-                  onClick={() => setActiveType(tool.id)}
+                  onClick={() => {
+                    setActiveType(tool.id);
+                    setResult(null);
+                  }}
                   className={`w-full flex items-center gap-4 p-6 rounded-[32px] border transition-all text-left ${
                     activeType === tool.id 
                       ? 'bg-white dark:bg-white/5 border-amber-500 shadow-xl' 
@@ -70,20 +98,87 @@ export default function AIContentGenerator() {
              <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[48px] p-10 space-y-10 relative overflow-hidden">
                 <Sparkles className="absolute -top-12 -right-12 w-48 h-48 text-amber-500/5 rotate-12" />
                 
-                <div className="space-y-4 relative z-10">
-                   <h3 className="text-3xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter">
-                      Magic <span className="text-amber-500">{activeType.charAt(0).toUpperCase() + activeType.slice(1)}</span>
-                   </h3>
-                   <p className="text-sm text-slate-500 dark:text-white/40 max-w-xl font-medium">Describe your cultural concept. Our localized AI models understand the nuances of {activeType === 'translation' ? '30+ Indian languages' : 'Indian cultural nuances'}.</p>
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
+                   <div className="space-y-4">
+                      <h3 className="text-3xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter">
+                         Magic <span className="text-amber-500">{activeType.charAt(0).toUpperCase() + activeType.slice(1)}</span>
+                      </h3>
+                      <p className="text-sm text-slate-500 dark:text-white/40 max-w-xl font-medium">
+                         {activeType === 'subtitles' 
+                           ? 'Upload your video and we\'ll generate accurate captions in your chosen Indian language.' 
+                           : 'Describe your cultural concept. Our localized AI models understand nuances of Indian traditions.'}
+                      </p>
+                   </div>
+
+                   {/* Language Selector */}
+                   <div className="flex flex-col gap-2 w-full md:w-auto">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                         <Globe className="w-3 h-3" /> Target Language
+                      </label>
+                      <select 
+                        value={selectedLanguage}
+                        onChange={(e) => setSelectedLanguage(e.target.value)}
+                        className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-amber-500 transition-all cursor-pointer"
+                      >
+                         {INDIAN_LANGUAGES.map(lang => (
+                           <option key={lang} value={lang}>{lang}</option>
+                         ))}
+                      </select>
+                   </div>
                 </div>
 
                 <div className="space-y-6 relative z-10">
+                   {/* Conditional Upload for Subtitles */}
+                   {activeType === 'subtitles' && (
+                     <div className="space-y-4">
+                        <input 
+                           type="file" 
+                           ref={fileInputRef}
+                           onChange={handleFileChange}
+                           className="hidden" 
+                           accept="video/*"
+                        />
+                        {!uploadedFile ? (
+                           <div 
+                              onClick={() => fileInputRef.current?.click()}
+                              className="border-2 border-dashed border-slate-200 dark:border-white/10 rounded-[32px] p-12 flex flex-col items-center justify-center gap-4 hover:border-amber-500 hover:bg-amber-500/5 transition-all cursor-pointer group"
+                           >
+                              <div className="p-5 rounded-full bg-slate-100 dark:bg-white/5 text-slate-400 group-hover:text-amber-500 transition-colors">
+                                 <Upload className="w-8 h-8" />
+                              </div>
+                              <div className="text-center">
+                                 <p className="text-sm font-black uppercase tracking-widest text-slate-900 dark:text-white">Drop your video here</p>
+                                 <p className="text-xs text-slate-400 font-medium mt-1">MP4, MOV, WEBM up to 500MB</p>
+                              </div>
+                           </div>
+                        ) : (
+                           <div className="flex items-center justify-between p-6 bg-slate-900 dark:bg-white rounded-[32px] text-white dark:text-slate-900">
+                              <div className="flex items-center gap-4">
+                                 <div className="p-3 bg-white/10 dark:bg-black/10 rounded-xl">
+                                    <Video className="w-5 h-5" />
+                                 </div>
+                                 <div className="space-y-1">
+                                    <p className="text-sm font-black uppercase tracking-tight">{uploadedFile.name}</p>
+                                    <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest">{(uploadedFile.size / (1024 * 1024)).toFixed(2)} MB &bull; Ready to process</p>
+                                 </div>
+                              </div>
+                              <button 
+                                 onClick={() => setUploadedFile(null)}
+                                 className="p-3 hover:bg-white/10 dark:hover:bg-black/10 rounded-xl transition-all"
+                              >
+                                 <X className="w-5 h-5" />
+                              </button>
+                           </div>
+                        )}
+                     </div>
+                   )}
+
                    <div className="relative group">
                       <textarea 
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
-                        placeholder="e.g. Write a short video script about the significance of Kolam art during Pongal..." 
-                        className="w-full bg-slate-50 dark:bg-white/2 border border-slate-100 dark:border-white/5 rounded-[32px] p-10 min-h-[300px] text-lg font-medium text-slate-700 dark:text-white/80 outline-none focus:border-amber-500 transition-all resize-none shadow-inner"
+                        placeholder={activeType === 'subtitles' ? 'Add any context or special instructions (optional)...' : "e.g. Write a short video script about the significance of Kolam art during Pongal..."} 
+                        className={`w-full bg-slate-50 dark:bg-white/2 border border-slate-100 dark:border-white/5 rounded-[32px] p-10 text-lg font-medium text-slate-700 dark:text-white/80 outline-none focus:border-amber-500 transition-all resize-none shadow-inner ${activeType === 'subtitles' ? 'min-h-[150px]' : 'min-h-[300px]'}`}
                       />
                       <div className="absolute bottom-6 right-6 flex gap-3">
                          <button className="p-4 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-2xl text-slate-400 hover:text-amber-500 transition-colors">
@@ -91,7 +186,7 @@ export default function AIContentGenerator() {
                          </button>
                          <button 
                            onClick={handleGenerate}
-                           disabled={isGenerating || !prompt}
+                           disabled={isGenerating || (activeType !== 'subtitles' && !prompt) || (activeType === 'subtitles' && !uploadedFile)}
                            className="flex items-center gap-3 px-10 py-4 bg-amber-500 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl shadow-amber-500/30 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
                          >
                             {isGenerating ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
@@ -109,14 +204,19 @@ export default function AIContentGenerator() {
                         className="p-10 bg-indigo-600/5 border border-indigo-500/20 rounded-[40px] space-y-6 relative group"
                       >
                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">AI Output Pipeline</span>
+                            <div className="flex items-center gap-3">
+                               <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">AI Output Pipeline</span>
+                               {activeType === 'subtitles' && (
+                                 <span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 text-[8px] font-black uppercase rounded-full tracking-widest uppercase">SRT Ready</span>
+                               )}
+                            </div>
                             <div className="flex gap-2">
                                <button className="p-3 bg-white dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 text-slate-400 hover:text-indigo-500 transition-all"><Copy className="w-4 h-4" /></button>
                                <button className="p-3 bg-white dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 text-slate-400 hover:text-indigo-500 transition-all"><Download className="w-4 h-4" /></button>
                             </div>
                          </div>
-                         <div className="text-xl font-medium text-slate-700 dark:text-white/80 leading-relaxed italic">
-                            "{result}"
+                         <div className="text-xl font-medium text-slate-700 dark:text-white/80 leading-relaxed italic whitespace-pre-line">
+                            {result}
                          </div>
                       </motion.div>
                    )}
@@ -142,6 +242,3 @@ export default function AIContentGenerator() {
     </div>
   );
 }
-
-// Missing import fix
-import { FileText } from 'lucide-react';

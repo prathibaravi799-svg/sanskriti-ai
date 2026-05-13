@@ -1,4 +1,4 @@
-import { collection, addDoc, getDocs, query, where, Timestamp, doc, getDocFromServer } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, Timestamp, doc, getDoc, getDocFromServer } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage, auth } from './config';
 
@@ -56,6 +56,7 @@ testConnection();
 
 export const STORIES_COLLECTION = 'stories';
 export const CONTRIBUTIONS_COLLECTION = 'contributions';
+export const ARTISTS_COLLECTION = 'artists';
 
 export interface Story {
   id?: string;
@@ -67,6 +68,65 @@ export interface Story {
   createdAt: any;
   category: string;
 }
+
+export interface Artist {
+  id: string;
+  name: string;
+  state: string;
+  specialization: string;
+  experience: string;
+  languages: string[];
+  teachingMode: 'Online' | 'Offline' | 'Hybrid';
+  bio: string;
+  skills: string[];
+  price: number;
+  email: string;
+  phone: string;
+  social: {
+    instagram?: string;
+    whatsapp?: string;
+    website?: string;
+  };
+  rating: number;
+  reviewsCount: number;
+  avatar: string;
+  portfolio: string[];
+  demoVideos: {
+    id: string;
+    title: string;
+    thumbnail: string;
+    url: string;
+  }[];
+}
+
+export const getMentors = async (stateFilter?: string) => {
+  try {
+    const artistsRef = collection(db, ARTISTS_COLLECTION);
+    const q = stateFilter 
+      ? query(artistsRef, where('state', '==', stateFilter))
+      : artistsRef;
+    
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ ...doc.data() } as Artist));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, ARTISTS_COLLECTION);
+    return [];
+  }
+};
+
+export const getMentor = async (id: string) => {
+  try {
+    const artistRef = doc(db, ARTISTS_COLLECTION, id);
+    const docSnap = await getDoc(artistRef);
+    if (docSnap.exists()) {
+      return { ...docSnap.data() } as Artist;
+    }
+    return null;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, `${ARTISTS_COLLECTION}/${id}`);
+    return null;
+  }
+};
 
 export const getStories = async (stateFilter?: string) => {
   try {

@@ -1,27 +1,47 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Filter, Sparkles, MapPin, Star, Laptop, Users, GraduationCap, ChevronRight } from 'lucide-react';
+import { Search, Filter, Sparkles, MapPin, Star, Laptop, Users, GraduationCap, ChevronRight, Loader2 } from 'lucide-react';
 import { ARTISTS_DATA, Artist } from '../data/artists';
 import { useNavigate } from 'react-router-dom';
+import { getMentors } from '../firebase/firestore';
 
 export default function ArtistDirectory() {
   const [search, setSearch] = useState('');
   const [selectedState, setSelectedState] = useState('All');
   const [selectedMode, setSelectedMode] = useState('All');
+  const [mentors, setMentors] = useState<Artist[]>(ARTISTS_DATA);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const states = ['All', ...new Set(ARTISTS_DATA.map(a => a.state))];
+  useEffect(() => {
+    const loadMentors = async () => {
+      try {
+        const firestoreMentors = await getMentors();
+        if (firestoreMentors.length > 0) {
+          // Merge or state priority
+          setMentors(firestoreMentors);
+        }
+      } catch (error) {
+        console.error('Failed to load mentors from Firestore', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadMentors();
+  }, []);
+
+  const states = useMemo(() => ['All', ...new Set(mentors.map(a => a.state))], [mentors]);
   const modes = ['All', 'Online', 'Offline', 'Hybrid'];
 
   const filteredArtists = useMemo(() => {
-    return ARTISTS_DATA.filter(a => {
+    return mentors.filter(a => {
       const matchSearch = a.name.toLowerCase().includes(search.toLowerCase()) || 
                           a.specialization.toLowerCase().includes(search.toLowerCase());
       const matchState = selectedState === 'All' || a.state === selectedState;
       const matchMode = selectedMode === 'All' || a.teachingMode === selectedMode;
       return matchSearch && matchState && matchMode;
     });
-  }, [search, selectedState, selectedMode]);
+  }, [search, selectedState, selectedMode, mentors]);
 
   return (
     <div className="min-h-screen pt-12 pb-20 px-6 space-y-16 max-w-[1600px] mx-auto">
@@ -42,7 +62,7 @@ export default function ArtistDirectory() {
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full lg:w-auto">
            {[
-             { label: 'Mentors', val: ARTISTS_DATA.length, icon: GraduationCap },
+             { label: 'Mentors', val: mentors.length, icon: GraduationCap },
              { label: 'States', val: states.length - 1, icon: MapPin },
              { label: 'Workshops', val: '50+', icon: Users },
              { label: 'Global Students', val: '2.5k', icon: Laptop }

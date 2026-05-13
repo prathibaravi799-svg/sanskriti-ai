@@ -72,7 +72,7 @@ export default function CreatorDashboard() {
                 <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter">Studio <span className="text-indigo-500">Toolkit</span></h3>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
                    {[
-                     { label: 'Video Editor', icon: Video, color: 'bg-indigo-500/10 text-indigo-500', path: '/library' },
+                     { label: 'Video Editor', icon: Video, color: 'bg-indigo-500/10 text-indigo-500', path: '/creator/video-editor' },
                      { label: 'Folklore Lab', icon: Play, color: 'bg-amber-500/10 text-amber-500', path: '/folklore/create' },
                      { label: 'Asset Vault', icon: Music, color: 'bg-rose-500/10 text-rose-500', path: '/creator/vault' },
                      { label: 'AI Studio', icon: Subtitles, color: 'bg-emerald-500/10 text-emerald-500', path: '/creator/ai-lab' },

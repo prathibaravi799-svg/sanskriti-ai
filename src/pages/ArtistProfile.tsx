@@ -1,22 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   MapPin, Star, Calendar, MessageSquare, Heart, Share2, 
   ChevronLeft, Play, Layout, Users, ShieldCheck, Clock, 
-  Video, BookOpen, MessageCircle
+  Video, BookOpen, MessageCircle, Phone, Mail, Loader2
 } from 'lucide-react';
 import { ARTISTS_DATA, Artist } from '../data/artists';
 import { useUser } from '../context/UserContext';
+import { getMentors, getMentor } from '../firebase/firestore';
 
 export default function ArtistProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, login } = useUser();
-  const artist = ARTISTS_DATA.find(a => a.id === id);
-
+  const [artist, setArtist] = useState<Artist | undefined>(ARTISTS_DATA.find(a => a.id === id));
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'About' | 'Portfolio' | 'Reviews' | 'Tutorials'>('About');
   const [showBooking, setShowBooking] = useState(false);
+
+  useEffect(() => {
+    const loadArtist = async () => {
+      try {
+        if (id) {
+          const found = await getMentor(id);
+          if (found) {
+            setArtist(found);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching artist from Firestore', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadArtist();
+  }, [id]);
+
+  if (loading && !artist) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <Loader2 className="w-12 h-12 text-amber-500 animate-spin" />
+        <p className="text-xl font-black text-slate-400 uppercase tracking-widest">Entering the Master's Studio...</p>
+      </div>
+    );
+  }
 
   if (!artist) {
     return (
@@ -210,6 +238,22 @@ export default function ArtistProfile() {
 
               <div className="pt-10 border-t border-slate-100 dark:border-white/5 space-y-6">
                  <h4 className="text-[10px] font-black text-slate-400 dark:text-white/20 uppercase tracking-widest">Connect with Artist</h4>
+                 <div className="flex flex-col gap-3">
+                    <a 
+                      href={`mailto:${artist.email}`}
+                      className="flex items-center gap-4 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl text-indigo-600 hover:bg-indigo-500 hover:text-white transition-all group"
+                    >
+                       <Mail className="w-5 h-5" />
+                       <span className="text-[10px] font-black uppercase tracking-widest">Email Artisan</span>
+                    </a>
+                    <a 
+                      href={`tel:${artist.phone}`}
+                      className="flex items-center gap-4 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all group"
+                    >
+                       <Phone className="w-5 h-5" />
+                       <span className="text-[10px] font-black uppercase tracking-widest">Call Artisan</span>
+                    </a>
+                 </div>
                  <div className="flex gap-4">
                     {artist.social.instagram && (
                       <a href="#" className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl text-slate-400 hover:text-amber-500 transition-colors">

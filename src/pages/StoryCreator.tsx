@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Save, Share2, Sparkles, BookOpen, 
   Image as ImageIcon, Music, Type, Plus,
-  ChevronLeft, Layout, Send
+  ChevronLeft, Layout, Send, Headphones
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -151,7 +151,7 @@ export default function StoryCreator() {
                          <button className="w-full flex items-center justify-between p-6 bg-white/10 border border-white/20 rounded-3xl hover:bg-white/20 transition-all group">
                             <div className="flex items-center gap-4">
                                <div className="p-3 bg-white/10 rounded-xl">
-                                  <Headset className="w-5 h-5" />
+                                  <Headphones className="w-5 h-5" />
                                </div>
                                <span className="text-sm font-black uppercase tracking-widest">Voice Recording</span>
                             </div>
