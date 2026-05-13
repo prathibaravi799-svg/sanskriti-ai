@@ -1,0 +1,44 @@
+{
+  "entities": {
+    "Story": {
+      "title": "Cultural Story",
+      "description": "A story about a cultural tradition or regional folklore.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Title of the story" },
+        "content": { "type": "string", "description": "Full text of the story" },
+        "image": { "type": "string", "description": "URL to the image" },
+        "state": { "type": "string", "description": "State of origin" },
+        "author": { "type": "string", "description": "Author email or anonymous" },
+        "category": { "type": "string", "description": "Category like Folklore or Art" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "content", "state"]
+    },
+    "Contribution": {
+      "title": "User Contribution",
+      "description": "A cultural tradition shared by a user for community review.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "image": { "type": "string" },
+        "state": { "type": "string" },
+        "author": { "type": "string" },
+        "category": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "content", "state"]
+    }
+  },
+  "firestore": {
+    "/stories/{storyId}": {
+      "schema": "Story",
+      "description": "Main collection for published cultural stories"
+    },
+    "/contributions/{contributionId}": {
+      "schema": "Contribution",
+      "description": "Collection for user-submitted cultural traditions"
+    }
+  }
+}

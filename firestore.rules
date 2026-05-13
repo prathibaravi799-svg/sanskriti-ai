@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Default deny for safety
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Stories: Public Read
+    match /stories/{storyId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Contributions: Authenticated owner read/write
+    match /contributions/{contributionId} {
+      allow read, write: if isSignedIn() && (
+        resource == null || resource.data.author == request.auth.token.email
+      );
+    }
+  }
+}

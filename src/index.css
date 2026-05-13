@@ -1,0 +1,114 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Playfair Display", serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  
+  --color-saffron: #FF9933;
+  --color-india-green: #138808;
+  --color-navy: #000080;
+  --color-dark-bg: #050505;
+  
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+}
+
+@layer base {
+  body {
+    @apply bg-dark-bg text-white font-sans antialiased;
+    margin: 0;
+  }
+}
+
+@layer utilities {
+  .serif {
+    font-family: var(--font-serif);
+  }
+
+  .glass {
+    background-color: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .glass-card {
+    background-color: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-2xl);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .glass-card:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    @apply border-white/20;
+  }
+
+  .card-pattern {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  .glow-text {
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+  }
+
+  .ashoka-watermark {
+    @apply absolute top-1/2 left-[30%] -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-[0.03] text-white;
+    width: 600px;
+    height: 600px;
+  }
+
+  .nav-item-hover {
+    @apply relative;
+  }
+
+  .nav-item-hover::after {
+    content: '';
+    @apply absolute -bottom-1 left-0 w-0 h-[2px] bg-saffron transition-all duration-300;
+  }
+
+  .nav-item-hover:hover::after {
+    @apply w-full;
+  }
+
+  .india-state-path {
+    fill: #1a1a1a;
+    stroke: #333;
+    stroke-width: 0.5;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .india-state-path:hover {
+    fill: var(--color-saffron);
+    @apply stroke-white;
+    filter: drop-shadow(0 0 8px var(--color-saffron));
+  }
+
+  .india-state-path.selected {
+    fill: var(--color-saffron);
+    @apply stroke-white;
+    transform: scale(1.02);
+    filter: drop-shadow(0 0 15px rgba(255, 153, 51, 0.5));
+  }
+
+  .sidebar-enter {
+    animation: slideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes chakra-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.chakra-decoration-animate {
+  animation: chakra-rotate 60s linear infinite;
+}
