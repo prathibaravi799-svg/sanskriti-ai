@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Menu, X, Compass, Home, User, Award, ShoppingBag } from 'lucide-react';
+import { Sparkles, Menu, X, Compass, Home, User, Award, ShoppingBag, GraduationCap, LayoutDashboard, LogIn, MessageSquare, Play, Book, Video } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useLanguage } from '../context/LanguageContext';
+import { useUser } from '../context/UserContext';
 
 export default function Navbar() {
   const { t } = useLanguage();
+  const { user, profile, login, logout } = useUser();
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -22,6 +24,10 @@ export default function Navbar() {
     { path: '/', label: 'Home', icon: Home },
     { path: '/discover', label: 'Explore', icon: Compass },
     { path: '/marketplace', label: 'Market', icon: ShoppingBag },
+    { path: '/mentors', label: 'Mentors', icon: GraduationCap },
+    { path: '/folklore', label: 'Universe', icon: Book },
+    { path: '/community', label: 'Nexus', icon: MessageSquare },
+    { path: '/library', label: 'Vault', icon: Play },
   ];
 
   return (
@@ -50,7 +56,7 @@ export default function Navbar() {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`relative px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${
+                className={`relative px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
                   location.pathname === link.path
                     ? 'text-white'
                     : 'text-slate-500 dark:text-white/40 hover:text-slate-900 dark:hover:text-white'
@@ -71,11 +77,35 @@ export default function Navbar() {
             ))}
           </div>
 
-          <div className="h-6 w-px bg-slate-300 dark:bg-white/10" />
+          <div className="h-6 w-px bg-slate-200 dark:bg-white/10" />
 
           <div className="flex items-center gap-4">
             <LanguageSwitcher />
             <ThemeToggle />
+            
+            {user ? (
+              <div className="flex items-center gap-3">
+                <Link 
+                  to="/creator-dashboard"
+                  className="hidden lg:flex items-center gap-2 px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500 transition-all text-indigo-600 hover:text-white rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-500/20"
+                >
+                  <Video className="w-3 h-3" />
+                  Studio
+                </Link>
+                <Link to="/dashboard" className="flex items-center gap-2 p-1 bg-slate-200/50 dark:bg-white/5 rounded-full border border-slate-300 dark:border-white/10 group pr-3">
+                  <img src={user.photoURL || ''} alt="" className="w-8 h-8 rounded-full object-cover" />
+                  <span className="hidden lg:block text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-white/40">Vault</span>
+                </Link>
+              </div>
+            ) : (
+              <button 
+                onClick={() => login()}
+                className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl hover:scale-105 transition-all"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                Auth
+              </button>
+            )}
           </div>
         </div>
 

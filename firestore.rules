@@ -1,70 +1,116 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // 0. Global Safety Net
+    // Default deny
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Phase 3: Primitives
+    // Helper functions
     function isSignedIn() { return request.auth != null; }
-    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
     function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
 
-    // Validation Helpers
-    function isValidStory(data) {
-      return data.keys().hasAll(['title', 'content', 'state', 'category', 'createdAt'])
-        && data.title is string && data.title.size() <= 200
-        && data.content is string && data.content.size() <= 10000
-        && data.state is string && data.state.size() <= 50
-        && data.category is string && data.category.size() <= 100
-        && data.createdAt is timestamp;
+    // User Profile Rules
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if false;
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidUser(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'wishlist', 'cart', 'enrolledClasses', 'achievements', 'preferences'])
+      );
     }
 
-    function isValidContribution(data) {
-      return data.keys().hasAll(['title', 'content', 'state', 'author', 'createdAt'])
-        && data.title is string && data.title.size() <= 200
-        && data.content is string && data.content.size() <= 5000
-        && data.state is string && data.state.size() <= 50
-        // Either matches user email or is set to literal 'Anonymous'
-        && (data.author == 'Anonymous' || (isSignedIn() && data.author == request.auth.token.email))
-        && data.createdAt == request.time;
+    function isValidUser(data) {
+      return data.uid is string && data.email is string && 
+             data.displayName is string && data.displayName.size() <= 100;
     }
 
-    // Test Connection Path
-    match /test/connection {
-      allow read: if true;
+    // Artist Profile Rules
+    match /artists/{artistId} {
+      allow get, list: if true;
+      allow create, update: if isSignedIn() && (isOwner(artistId) || request.auth.token.admin == true);
     }
 
-    // 1. Stories: Main collection for published cultural stories
-    match /stories/{storyId} {
-      allow get: if isValidId(storyId);
-      // Evaluates resource.data.title to satisfy the "not blanket" requirement
-      allow list: if resource.data != null && resource.data.title is string; 
-      allow write: if false; 
+    // Product Rules
+    match /products/{productId} {
+      allow get, list: if true;
+      allow create, update, delete: if isSignedIn() && request.auth.token.admin == true;
     }
 
-    // 2. Contributions: Collection for user-submitted cultural traditions
-    match /contributions/{contributionId} {
-      // Contributions are public if the user is logged in, or private if we want?
-      // For a community page, we probably want to see everyone's contributions.
-      // But if restricted to owner, we use this:
-      allow get: if isValidId(contributionId) && (existing().author == 'Anonymous' || (isSignedIn() && existing().author == request.auth.token.email));
-      allow list: if (resource.data.author == 'Anonymous' || (isSignedIn() && resource.data.author == request.auth.token.email));
-      
-      allow create: if isValidId(contributionId) && isValidContribution(incoming());
-      
-      allow update: if isVerified() && isValidId(contributionId) && isValidContribution(incoming())
-        && incoming().author == existing().author
-        && incoming().createdAt == existing().createdAt
-        && (
-          incoming().diff(existing()).affectedKeys().hasOnly(['title', 'content', 'state', 'category', 'image'])
-        );
-      
-      allow delete: if isVerified() && isValidId(contributionId) && existing().author == request.auth.token.email;
+    // Booking Rules
+    match /bookings/{bookingId} {
+      allow get: if isSignedIn() && (isOwner(existing().userId) || isOwner(existing().artistId));
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.artistId == request.auth.uid);
+      allow create: if isSignedIn() && isOwner(incoming().userId) && isValidBooking(incoming());
+      allow update: if isSignedIn() && (isOwner(existing().userId) || isOwner(existing().artistId)) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['status'])
+      );
+    }
+
+    function isValidBooking(data) {
+      return data.userId is string && data.artistId is string && data.sessionId is string;
+    }
+
+    // Live Sessions
+    match /liveSessions/{sessionId} {
+      allow get, list: if true;
+      allow create, update, delete: if isSignedIn() && (isOwner(incoming().artistId) || request.auth.token.admin == true);
+    }
+
+    // Videos
+    match /videos/{videoId} {
+      allow get, list: if true;
+      allow create, update, delete: if isSignedIn() && (isOwner(incoming().artistId) || request.auth.token.admin == true);
+    }
+
+    // Reviews
+    match /reviews/{reviewId} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && isOwner(incoming().userId);
+      allow update, delete: if isSignedIn() && isOwner(existing().userId);
+    }
+
+    // Achievements
+    match /achievements/{achievementId} {
+      allow get, list: if isSignedIn() && isOwner(resource.data.userId);
+      allow create, update, delete: if isSignedIn() && request.auth.token.admin == true;
+    }
+
+    // Chats
+    match /chats/{chatId} {
+      allow get, list: if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow create: if isSignedIn() && request.auth.uid in incoming().participants;
+      allow update: if isSignedIn() && request.auth.uid in existing().participants;
+    }
+
+    // Folklore Stories
+    match /folklore/{storyId} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && isOwner(incoming().creatorId);
+      allow update, delete: if isSignedIn() && isOwner(existing().creatorId);
+    }
+
+    // Chapters
+    match /chapters/{chapterId} {
+      allow get, list: if true;
+      allow create, update, delete: if isSignedIn(); // Simplified for now, should check story creator
+    }
+
+    // Streams
+    match /streams/{streamId} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && isOwner(incoming().creatorId);
+      allow update: if isSignedIn() && isOwner(existing().creatorId);
+    }
+
+    // Comments
+    match /comments/{commentId} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && isOwner(incoming().userId);
+      allow update, delete: if isSignedIn() && isOwner(existing().userId);
     }
   }
 }

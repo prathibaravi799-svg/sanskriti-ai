@@ -1,7 +1,27 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { onAuthStateChanged, User as FirebaseUser, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { auth, db } from '../lib/firebase';
 import { Review } from '../data/products';
 
+interface UserProfile {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  wishlist: string[];
+  cart: { id: string; quantity: number }[];
+  exploredStates: string[];
+  enrolledClasses: string[];
+  achievements: string[];
+}
+
 interface UserContextType {
+  user: FirebaseUser | null;
+  profile: UserProfile | null;
+  loading: boolean;
+  login: () => Promise<void>;
+  logout: () => Promise<void>;
   exploredStates: string[];
   toggleExplored: (stateId: string) => void;
   wishlist: string[];
@@ -20,20 +40,13 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [exploredStates, setExploredStates] = useState<string[]>(() => {
-    const saved = localStorage.getItem('sanskriti-explored');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const [wishlist, setWishlist] = useState<string[]>(() => {
-    const saved = localStorage.getItem('sanskriti-wishlist');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [cart, setCart] = useState<{ id: string; quantity: number }[]>(() => {
-    const saved = localStorage.getItem('sanskriti-cart');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [exploredStates, setExploredStates] = useState<string[]>([]);
+  const [wishlist, setWishlist] = useState<string[]>([]);
+  const [cart, setCart] = useState<{ id: string; quantity: number }[]>([]);
 
   const [localReviews, setLocalReviews] = useState<Record<string, Review[]>>(() => {
     const saved = localStorage.getItem('sanskriti-reviews');
@@ -63,25 +76,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   useEffect(() => {
-    localStorage.setItem('sanskriti-explored', JSON.stringify(exploredStates));
-  }, [exploredStates]);
-
-  useEffect(() => {
     localStorage.setItem('sanskriti-streak', streak.toString());
     localStorage.setItem('sanskriti-last-visit', new Date().toDateString());
   }, [streak]);
-
-  useEffect(() => {
-    localStorage.setItem('sanskriti-wishlist', JSON.stringify(wishlist));
-  }, [wishlist]);
-
-  useEffect(() => {
-    localStorage.setItem('sanskriti-cart', JSON.stringify(cart));
-  }, [cart]);
-
-  useEffect(() => {
-    localStorage.setItem('sanskriti-reviews', JSON.stringify(localReviews));
-  }, [localReviews]);
 
   useEffect(() => {
     localStorage.setItem('sanskriti-theme', theme);
@@ -92,34 +89,121 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [theme]);
 
+  // Auth Listener
+  useEffect(() => {
+    return onAuthStateChanged(auth, async (u) => {
+      setUser(u);
+      if (u) {
+        const userDoc = doc(db, 'users', u.uid);
+        const snapshot = await getDoc(userDoc);
+        
+        if (!snapshot.exists()) {
+          const newProfile: UserProfile = {
+            uid: u.uid,
+            email: u.email,
+            displayName: u.displayName,
+            photoURL: u.photoURL,
+            wishlist: [],
+            cart: [],
+            exploredStates: [],
+            enrolledClasses: [],
+            achievements: []
+          };
+          await setDoc(userDoc, newProfile);
+          setProfile(newProfile);
+        } else {
+          setProfile(snapshot.data() as UserProfile);
+        }
+
+        // Real-time sync
+        onSnapshot(userDoc, (doc) => {
+          if (doc.exists()) {
+            const data = doc.data() as UserProfile;
+            setProfile(data);
+            setWishlist(data.wishlist || []);
+            setCart(data.cart || []);
+            setExploredStates(data.exploredStates || []);
+          }
+        });
+      } else {
+        setProfile(null);
+        // Fallback to local storage if not logged in
+        const savedExp = localStorage.getItem('sanskriti-explored');
+        const savedWish = localStorage.getItem('sanskriti-wishlist');
+        const savedCart = localStorage.getItem('sanskriti-cart');
+        setExploredStates(savedExp ? JSON.parse(savedExp) : []);
+        setWishlist(savedWish ? JSON.parse(savedWish) : []);
+        setCart(savedCart ? JSON.parse(savedCart) : []);
+      }
+      setLoading(false);
+    });
+  }, []);
+
+  const login = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (error: any) {
+      if (error.code === 'auth/popup-closed-by-user') {
+        console.log('Login popup closed by user');
+        return;
+      }
+      console.error('Login error:', error);
+      throw error;
+    }
+  };
+
+  const logout = async () => {
+    await signOut(auth);
+  };
+
+  // Sync Local Storage as fallback
+  useEffect(() => {
+    if (!user) {
+      localStorage.setItem('sanskriti-explored', JSON.stringify(exploredStates));
+      localStorage.setItem('sanskriti-wishlist', JSON.stringify(wishlist));
+      localStorage.setItem('sanskriti-cart', JSON.stringify(cart));
+    }
+  }, [exploredStates, wishlist, cart, user]);
+
+  const updateProfile = async (updates: Partial<UserProfile>) => {
+    if (user) {
+      await setDoc(doc(db, 'users', user.uid), updates, { merge: true });
+    }
+  };
+
   const toggleExplored = (stateId: string) => {
-    setExploredStates(prev => 
-      prev.includes(stateId) ? prev : [...prev, stateId]
-    );
+    const newExplored = exploredStates.includes(stateId) ? exploredStates : [...exploredStates, stateId];
+    setExploredStates(newExplored);
+    if (user) updateProfile({ exploredStates: newExplored });
   };
 
   const toggleWishlist = (productId: string) => {
-    setWishlist(prev => 
-      prev.includes(productId) 
-        ? prev.filter(id => id !== productId) 
-        : [...prev, productId]
-    );
+    const newWishlist = wishlist.includes(productId) 
+      ? wishlist.filter(id => id !== productId) 
+      : [...wishlist, productId];
+    setWishlist(newWishlist);
+    if (user) updateProfile({ wishlist: newWishlist });
   };
 
   const addToCart = (productId: string) => {
-    setCart(prev => {
-      const existing = prev.find(item => item.id === productId);
-      if (existing) {
-        return prev.map(item => 
-          item.id === productId ? { ...item, quantity: item.quantity + 1 } : item
-        );
-      }
-      return [...prev, { id: productId, quantity: 1 }];
-    });
+    let newCart = [...cart];
+    const existing = newCart.find(item => item.id === productId);
+    if (existing) {
+      newCart = newCart.map(item => 
+        item.id === productId ? { ...item, quantity: item.quantity + 1 } : item
+      );
+    } else {
+      newCart.push({ id: productId, quantity: 1 });
+    }
+    setCart(newCart);
+    if (user) updateProfile({ cart: newCart });
   };
 
   const removeFromCart = (productId: string) => {
-    setCart(prev => prev.filter(item => item.id !== productId));
+    const newCart = cart.filter(item => item.id !== productId);
+    setCart(newCart);
+    if (user) updateProfile({ cart: newCart });
   };
 
   const addReview = (productId: string, reviewData: Omit<Review, 'id' | 'date'>) => {
@@ -132,12 +216,18 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       [productId]: [newReview, ...(prev[productId] || [])]
     }));
+    // Note: In production, this would go to a global reviews collection
   };
 
   const isStateExplored = (stateId: string) => exploredStates.includes(stateId);
 
   return (
     <UserContext.Provider value={{ 
+      user,
+      profile,
+      loading,
+      login,
+      logout,
       exploredStates, 
       toggleExplored, 
       wishlist,

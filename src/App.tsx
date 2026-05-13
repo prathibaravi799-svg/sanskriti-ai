@@ -4,6 +4,20 @@ import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Discover from './pages/Discover';
 import MarketplacePage from './pages/MarketplacePage';
+import ArtistDirectory from './pages/ArtistDirectory';
+import ArtistProfile from './pages/ArtistProfile';
+import StudentDashboard from './pages/StudentDashboard';
+import MentorDashboard from './pages/MentorDashboard';
+import LiveSessionUI from './components/LiveSessionUI';
+import CommunityForum from './pages/CommunityForum';
+import VideoGallery from './pages/VideoGallery';
+import FolkloreDashboard from './pages/FolkloreDashboard';
+import StoryCreator from './pages/StoryCreator';
+import CreatorDashboard from './pages/CreatorDashboard';
+import StoryViewer from './pages/StoryViewer';
+import MediaLibrary from './pages/MediaLibrary';
+import AIContentGenerator from './pages/AIContentGenerator';
+import LiveStreamingRoom from './pages/LiveStreamingRoom';
 import { LanguageProvider } from './context/LanguageContext';
 import { UserProvider } from './context/UserContext';
 import Chatbot from './components/Chatbot';
@@ -21,6 +35,20 @@ export default function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/discover" element={<Discover />} />
                 <Route path="/marketplace" element={<MarketplacePage />} />
+                <Route path="/mentors" element={<ArtistDirectory />} />
+                <Route path="/artist/:id" element={<ArtistProfile />} />
+                <Route path="/dashboard" element={<StudentDashboard />} />
+                <Route path="/mentor-dashboard" element={<MentorDashboard />} />
+                <Route path="/live-session" element={<LiveSessionUI />} />
+                <Route path="/community" element={<CommunityForum />} />
+                <Route path="/library" element={<VideoGallery />} />
+                <Route path="/folklore" element={<FolkloreDashboard />} />
+                <Route path="/folklore/view/:id" element={<StoryViewer />} />
+                <Route path="/folklore/create" element={<StoryCreator />} />
+                <Route path="/creator-dashboard" element={<CreatorDashboard />} />
+                <Route path="/creator/vault" element={<MediaLibrary />} />
+                <Route path="/creator/ai-lab" element={<AIContentGenerator />} />
+                <Route path="/live/studio" element={<LiveStreamingRoom />} />
               </Routes>
             </main>
 
