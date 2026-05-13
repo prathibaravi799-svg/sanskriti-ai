@@ -1,92 +1,125 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { motion } from 'motion/react';
-import { Compass, BookOpen, Users, Info, Map as MapIcon, Menu, X } from 'lucide-react';
-import { cn } from '../lib/utils';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
+import { Sparkles, Menu, X, Compass, Home, User, Award, ShoppingBag } from 'lucide-react';
+import ThemeToggle from './ThemeToggle';
+import LanguageSwitcher from './LanguageSwitcher';
+import { useLanguage } from '../context/LanguageContext';
 
-const Navbar = () => {
-  const [isOpen, setIsOpen] = React.useState(false);
+export default function Navbar() {
+  const { t } = useLanguage();
+  const location = useLocation();
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const navItems = [
-    { name: 'Discover', path: '/', icon: MapIcon },
-    { name: 'Folklore', path: '/stories', icon: BookOpen },
-    { name: 'Community', path: '/community', icon: Users },
-    { name: 'Explore', path: '/discover', icon: Compass },
-    { name: 'About', path: '/about', icon: Info },
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const navLinks = [
+    { path: '/', label: 'Home', icon: Home },
+    { path: '/discover', label: 'Explore', icon: Compass },
+    { path: '/marketplace', label: 'Market', icon: ShoppingBag },
   ];
 
   return (
-    <nav className="fixed top-0 left-0 w-full z-50 px-6 py-4">
-      <div className="max-w-7xl mx-auto flex items-center justify-between glass px-8 h-20 rounded-2xl shadow-2xl">
-        {/* Logo */}
-        <NavLink to="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center p-1 shadow-lg transition-transform duration-500 group-hover:rotate-12">
-            <div className="w-full h-full border-2 border-navy rounded-full flex items-center justify-center relative">
-              <div className="w-1.5 h-1.5 bg-navy rounded-full" />
-            </div>
+    <nav 
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 px-6 py-4 ${
+        isScrolled 
+          ? 'bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/5 py-3' 
+          : 'bg-transparent'
+      }`}
+    >
+      <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <Link to="/" className="flex items-center gap-2 group">
+          <div className="relative">
+            <div className="absolute -inset-1 bg-orange-500 rounded-full blur opacity-0 group-hover:opacity-50 transition duration-500" />
+            <Sparkles className="w-8 h-8 text-orange-500 relative" />
           </div>
-          <span className="text-xl font-bold tracking-tighter serif uppercase">
-            Sanskriti <span className="text-saffron">AI</span>
+          <span className="text-xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-rose-600">
+            Sanskriti
           </span>
-        </NavLink>
+        </Link>
 
         {/* Desktop Nav */}
-        <div className="hidden md:flex items-center gap-10">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) => cn(
-                "nav-item-hover text-sm font-medium uppercase tracking-widest transition-all duration-300 flex items-center gap-2",
-                isActive ? "text-saffron" : "text-white/60 hover:text-white"
-              )}
-            >
-              {item.name}
-            </NavLink>
-          ))}
+        <div className="hidden md:flex items-center gap-8">
+          <div className="flex items-center gap-2 bg-slate-200/50 dark:bg-white/5 p-1 rounded-full border border-slate-300 dark:border-white/10">
+            {navLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                className={`relative px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${
+                  location.pathname === link.path
+                    ? 'text-white'
+                    : 'text-slate-500 dark:text-white/40 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                {location.pathname === link.path && (
+                  <motion.div
+                    layoutId="nav-bg"
+                    className="absolute inset-0 bg-orange-500 rounded-full -z-10 shadow-lg shadow-orange-500/20"
+                    transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+                <span className="flex items-center gap-2">
+                  <link.icon className="w-3 h-3" />
+                  {link.label}
+                </span>
+              </Link>
+            ))}
+          </div>
+
+          <div className="h-6 w-px bg-slate-300 dark:bg-white/10" />
+
+          <div className="flex items-center gap-4">
+            <LanguageSwitcher />
+            <ThemeToggle />
+          </div>
         </div>
 
-        {/* Sign In Button */}
-        <button className="hidden md:block px-8 py-2.5 bg-saffron text-black font-bold rounded-full text-xs uppercase tracking-widest hover:bg-white transition-colors duration-300">
-          Sign In
-        </button>
-
-        {/* Mobile menu button */}
+        {/* Mobile Toggle */}
         <button 
-          className="md:hidden text-white/70 hover:text-white"
-          onClick={() => setIsOpen(!isOpen)}
+          className="md:hidden p-2 rounded-full bg-slate-200 dark:bg-white/5 text-slate-900 dark:text-white"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
-          {isOpen ? <X /> : <Menu />}
+          {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
       </div>
 
-      {/* Mobile Nav Overlay */}
-      {isOpen && (
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="md:hidden absolute top-24 left-6 right-6 glass p-6 rounded-2xl shadow-2xl z-40"
-        >
-          <div className="flex flex-col gap-4">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                onClick={() => setIsOpen(false)}
-                className={({ isActive }) => cn(
-                  "flex items-center gap-4 p-3 rounded-xl transition-all duration-300",
-                  isActive ? "bg-white/10 text-saffron" : "text-white/70"
-                )}
-              >
-                <item.icon className="w-5 h-5" />
-                <span className="font-medium">{item.name}</span>
-              </NavLink>
-            ))}
-          </div>
-        </motion.div>
-      )}
+      {/* Mobile Menu */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-full left-0 right-0 p-6 bg-white dark:bg-zinc-950 border-b border-slate-200 dark:border-white/10 shadow-2xl md:hidden"
+          >
+            <div className="flex flex-col gap-6">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`flex items-center gap-4 text-sm font-black uppercase tracking-[0.2em] ${
+                    location.pathname === link.path ? 'text-orange-500' : 'text-slate-500 dark:text-white/40'
+                  }`}
+                >
+                  <link.icon className="w-4 h-4" />
+                  {link.label}
+                </Link>
+              ))}
+              <div className="h-px bg-slate-200 dark:bg-white/10" />
+              <div className="flex items-center justify-between">
+                <LanguageSwitcher />
+                <ThemeToggle />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   );
-};
-
-export default Navbar;
+}

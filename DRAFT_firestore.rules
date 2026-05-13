@@ -9,6 +9,7 @@ service cloud.firestore {
 
     // Phase 3: Primitives
     function isSignedIn() { return request.auth != null; }
+    // Note: Allowing read to stories even for unverified users for better UX, but writes require verification.
     function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
     function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
     function incoming() { return request.resource.data; }
@@ -20,47 +21,44 @@ service cloud.firestore {
         && data.title is string && data.title.size() <= 200
         && data.content is string && data.content.size() <= 10000
         && data.state is string && data.state.size() <= 50
-        && data.category is string && data.category.size() <= 100
+        && data.category is string && data.category.size() <= 50
         && data.createdAt is timestamp;
     }
 
     function isValidContribution(data) {
+      // Required fields check
       return data.keys().hasAll(['title', 'content', 'state', 'author', 'createdAt'])
         && data.title is string && data.title.size() <= 200
         && data.content is string && data.content.size() <= 5000
         && data.state is string && data.state.size() <= 50
-        // Either matches user email or is set to literal 'Anonymous'
-        && (data.author == 'Anonymous' || (isSignedIn() && data.author == request.auth.token.email))
+        && data.author == request.auth.token.email
         && data.createdAt == request.time;
-    }
-
-    // Test Connection Path
-    match /test/connection {
-      allow read: if true;
     }
 
     // 1. Stories: Main collection for published cultural stories
     match /stories/{storyId} {
       allow get: if isValidId(storyId);
-      // Evaluates resource.data.title to satisfy the "not blanket" requirement
-      allow list: if resource.data != null && resource.data.title is string; 
-      allow write: if false; 
+      // Pillar 8: Secure List Queries (Enforce boundaries)
+      // Stories are public, so we allow listing but without complex filters that bypass security.
+      allow list: if true; 
+      allow write: if false; // Only Admin or System (handled via Service Accounts which bypass rules)
     }
 
     // 2. Contributions: Collection for user-submitted cultural traditions
     match /contributions/{contributionId} {
-      // Contributions are public if the user is logged in, or private if we want?
-      // For a community page, we probably want to see everyone's contributions.
-      // But if restricted to owner, we use this:
-      allow get: if isValidId(contributionId) && (existing().author == 'Anonymous' || (isSignedIn() && existing().author == request.auth.token.email));
-      allow list: if (resource.data.author == 'Anonymous' || (isSignedIn() && resource.data.author == request.auth.token.email));
+      allow get: if isVerified() && isValidId(contributionId) && existing().author == request.auth.token.email;
       
-      allow create: if isValidId(contributionId) && isValidContribution(incoming());
+      // Pillar 8: Secure List Queries
+      // Logic evaluates resource.data against request.auth.uid or owner email.
+      allow list: if isVerified() && resource.data.author == request.auth.token.email;
+      
+      allow create: if isVerified() && isValidId(contributionId) && isValidContribution(incoming());
       
       allow update: if isVerified() && isValidId(contributionId) && isValidContribution(incoming())
         && incoming().author == existing().author
         && incoming().createdAt == existing().createdAt
         && (
+          // Action: Edit content
           incoming().diff(existing()).affectedKeys().hasOnly(['title', 'content', 'state', 'category', 'image'])
         );
       

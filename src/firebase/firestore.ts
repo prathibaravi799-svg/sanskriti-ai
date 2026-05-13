@@ -35,7 +35,10 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
     operationType,
     path
   };
-  console.error('Firestore Error Detailed: ', JSON.stringify(errInfo));
+  console.error('Firestore Error Details:', {
+    ...errInfo,
+    databaseId: db.type === 'firestore' ? (db as any)._databaseId?.database : 'unknown'
+  });
   throw new Error(JSON.stringify(errInfo));
 }
 

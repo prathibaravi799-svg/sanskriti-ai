@@ -1,85 +1,104 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'motion/react';
-import IndiaMap from '../components/IndiaMap';
-import StateSidebar from '../components/StateSidebar';
-import { StateCode } from '../data/stateData';
+import { Sparkles, ArrowRight, Play, Compass, MapPin, TrendingUp } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useLanguage } from '../context/LanguageContext';
+import TrendingSection from '../components/TrendingSection';
+import ProgressTracker from '../components/ProgressTracker';
 
-const Home = () => {
-  const [selectedState, setSelectedState] = useState<StateCode | null>(null);
+export default function Home() {
+  const { t } = useLanguage();
 
   return (
-    <div className="relative min-h-screen pt-24 pb-20 overflow-hidden">
-      {/* Background Decorative Element */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full pointer-events-none opacity-20">
-        <div className="w-full h-full bg-[radial-gradient(circle_at_center,_var(--color-navy-blue)_0%,_transparent_70%)]" />
-      </div>
-
-      <div className="max-w-7xl mx-auto px-6 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Hero Content */}
+    <div className="min-h-screen pb-20 space-y-32">
+      {/* Hero Section */}
+      <section className="relative pt-20 pb-0 px-6">
+        <div className="max-w-7xl mx-auto text-center space-y-12">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="space-y-8"
-          >
-            <div className="space-y-4">
-              <h2 className="text-white/40 text-xs uppercase tracking-[0.4em] mb-2">Project Vision</h2>
-              <h1 className="text-7xl serif font-bold leading-[0.9] tracking-tight">
-                Preserving the <br />
-                <span className="text-saffron italic">Soul</span> of Bharat.
-              </h1>
-              <p className="max-w-md text-white/50 text-lg leading-relaxed font-light">
-                Interactive AI-powered preservation of India's endangered folklore, regional art, and rural traditions.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-8">
-              <button 
-                onClick={() => document.getElementById('map-section')?.scrollIntoView({ behavior: 'smooth' })}
-                className="px-10 py-4 bg-white text-navy font-bold rounded-full text-xs uppercase tracking-[0.2em] transform transition-all hover:bg-saffron hover:text-black hover:scale-105"
-              >
-                Launch Experience
-              </button>
-              <div className="flex flex-col border-l border-white/10 pl-6">
-                <span className="text-3xl font-bold glow-text">28+</span>
-                <span className="text-[10px] text-white/40 uppercase tracking-widest font-bold">States Cataloged</span>
-              </div>
-            </div>
-
-            {/* Featured Trad. (Smaller text but serif accented) */}
-            <div className="pt-12 space-y-4">
-              <h3 className="text-[10px] font-bold text-white/40 uppercase tracking-[0.4em]">Active Discovery</h3>
-              <div className="glass p-5 rounded-2xl border-white/5 inline-block">
-                <p className="text-sm serif italic mb-1 text-white/90">"The Legend of the Stone Chariot"</p>
-                <p className="text-xs text-white/40">Heritage Story from Karnataka Hub</p>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Map Section */}
-          <motion.div
-            id="map-section"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1, delay: 0.2 }}
-            className="relative"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-500"
           >
-            <IndiaMap 
-              onStateClick={(code) => setSelectedState(code)} 
-              selectedState={selectedState} 
-            />
+            <Sparkles className="w-4 h-4 fill-orange-500" />
+            <span className="text-xs font-black uppercase tracking-[0.3em]">{t('hero_title')}</span>
           </motion.div>
-        </div>
-      </div>
 
-      {/* State Info Sidebar */}
-      <StateSidebar 
-        stateCode={selectedState} 
-        onClose={() => setSelectedState(null)} 
-      />
+          <div className="space-y-4 max-w-4xl mx-auto">
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-7xl md:text-9xl font-black tracking-tighter leading-[0.85] text-slate-900 dark:text-white"
+            >
+              BHARAT <br />
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-orange-500 via-rose-500 to-indigo-500 italic">ARCHIVE</span>
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-lg md:text-2xl text-slate-500 dark:text-white/40 max-w-2xl mx-auto font-medium"
+            >
+              {t('hero_subtitle')}
+            </motion.p>
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-6"
+          >
+            <Link
+              to="/discover"
+              className="group relative px-10 py-5 bg-orange-500 rounded-2xl text-white font-black uppercase tracking-widest text-sm shadow-xl shadow-orange-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-3 overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+              Explore Legacy
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </Link>
+            
+            <button className="group px-10 py-5 bg-slate-950 dark:bg-white text-white dark:text-slate-950 rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-3">
+              Watch Reel
+              <Play className="w-4 h-4 fill-current" />
+            </button>
+          </motion.div>
+
+          {/* Floating Elements */}
+          <div className="relative pt-20">
+             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-orange-500/10 blur-[120px] rounded-full -z-10" />
+             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-6xl mx-auto">
+               {[
+                 { icon: Compass, label: 'Cultural Deep-Dive', color: 'orange' },
+                 { icon: Sparkles, label: 'AI Narratives', color: 'rose' },
+                 { icon: MapPin, label: 'State Discovery', color: 'indigo' },
+                 { icon: TrendingUp, label: 'Heritage Trends', color: 'emerald' }
+               ].map((item, i) => (
+                 <motion.div
+                   key={i}
+                   initial={{ opacity: 0, y: 30 }}
+                   animate={{ opacity: 1, y: 0 }}
+                   transition={{ delay: 0.4 + (i * 0.1) }}
+                   className="p-8 bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-3xl text-center space-y-4 shadow-xl"
+                 >
+                   <item.icon className={`w-8 h-8 mx-auto text-${item.color}-500`} />
+                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-white/40">{item.label}</p>
+                 </motion.div>
+               ))}
+             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Progress Section */}
+      <section className="max-w-7xl mx-auto px-6">
+        <ProgressTracker />
+      </section>
+
+      {/* Trending Section */}
+      <section className="max-w-7xl mx-auto px-6">
+        <TrendingSection />
+      </section>
     </div>
   );
-};
-
-export default Home;
+}
