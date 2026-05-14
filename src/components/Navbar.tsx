@@ -30,6 +30,8 @@ export default function Navbar() {
     { path: '/library', label: 'Vault', icon: Play },
   ];
 
+  const isAdminOrArtisan = profile?.role === 'artisan' || profile?.role === 'admin';
+
   return (
     <nav 
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 px-6 py-4 ${
@@ -85,26 +87,42 @@ export default function Navbar() {
             
             {user ? (
               <div className="flex items-center gap-3">
-                <Link 
-                  to="/creator-dashboard"
-                  className="hidden lg:flex items-center gap-2 px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500 transition-all text-indigo-600 hover:text-white rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-500/20"
-                >
-                  <Video className="w-3 h-3" />
-                  Studio
-                </Link>
-                <Link to="/dashboard" className="flex items-center gap-2 p-1 bg-slate-200/50 dark:bg-white/5 rounded-full border border-slate-300 dark:border-white/10 group pr-3">
-                  <img src={user.photoURL || ''} alt="" className="w-8 h-8 rounded-full object-cover" />
-                  <span className="hidden lg:block text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-white/40">Vault</span>
-                </Link>
+                {isAdminOrArtisan && (
+                  <Link 
+                    to="/mentor-dashboard"
+                    className="hidden lg:flex items-center gap-2 px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500 transition-all text-indigo-600 hover:text-white rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-500/20"
+                  >
+                    <Video className="w-3 h-3" />
+                    Studio
+                  </Link>
+                )}
+                <div className="flex items-center gap-3">
+                  <Link to="/dashboard" className="flex items-center gap-2 p-1 bg-slate-200/50 dark:bg-white/5 rounded-full border border-slate-300 dark:border-white/10 group pr-3">
+                    {user.photoURL ? (
+                      <img src={user.photoURL} alt="" className="w-8 h-8 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white text-[10px] font-black">
+                        {profile?.name?.charAt(0) || 'U'}
+                      </div>
+                    )}
+                    <span className="hidden lg:block text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-white/40">Vault</span>
+                  </Link>
+                  <button 
+                    onClick={logout}
+                    className="text-[8px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-500 transition-colors"
+                  >
+                    Logout
+                  </button>
+                </div>
               </div>
             ) : (
-              <button 
-                onClick={() => login()}
+              <Link 
+                to="/auth"
                 className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl hover:scale-105 transition-all"
               >
                 <LogIn className="w-3.5 h-3.5" />
                 Auth
-              </button>
+              </Link>
             )}
           </div>
         </div>

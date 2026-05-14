@@ -3,17 +3,35 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, BarChart3, Calendar, Video, 
   Plus, Settings, DollarSign, MessageCircle, 
-  Play, BookOpen, Radio, Sparkles, RefreshCcw, Check
+  Play, BookOpen, Radio, Sparkles, RefreshCcw, Check,
+  Package, Upload, X, Camera, Music, FileText, Loader2
 } from 'lucide-react';
 import { useUser } from '../context/UserContext';
 import { useNavigate } from 'react-router-dom';
 import { seedMentors } from '../services/dataSeeder';
+import { db, storage } from '../firebase/config';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export default function MentorDashboard() {
-  const { user } = useUser();
+  const { user, profile } = useUser();
   const navigate = useNavigate();
   const [isSeeding, setIsSeeding] = useState(false);
   const [seedStatus, setSeedStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  
+  // Upload Modals state
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [showWorkshopModal, setShowWorkshopModal] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Form states
+  const [productData, setProductData] = useState({
+    name: '',
+    price: '',
+    category: '',
+    description: ''
+  });
+  const [productImage, setProductImage] = useState<File | null>(null);
 
   const handleSyncData = async () => {
     setIsSeeding(true);
@@ -26,6 +44,37 @@ export default function MentorDashboard() {
       setTimeout(() => setSeedStatus('idle'), 3000);
     } finally {
       setIsSeeding(false);
+    }
+  };
+
+  const handleProductUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !productImage) return;
+    setIsUploading(true);
+    
+    try {
+      const imgRef = ref(storage, `products/${user.uid}/${Date.now()}_${productImage.name}`);
+      const snap = await uploadBytes(imgRef, productImage);
+      const url = await getDownloadURL(snap.ref);
+
+      await addDoc(collection(db, 'products'), {
+        ...productData,
+        price: Number(productData.price),
+        artistId: user.uid,
+        artistName: profile?.name || 'Anonymous',
+        imageUrl: url,
+        createdAt: serverTimestamp()
+      });
+
+      setShowProductModal(false);
+      setProductData({ name: '', price: '', category: '', description: '' });
+      setProductImage(null);
+      alert("Product uploaded successfully!");
+    } catch (err) {
+      console.error(err);
+      alert("Upload failed.");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -53,18 +102,11 @@ export default function MentorDashboard() {
 
         <div className="flex flex-wrap gap-4 justify-end">
           <button 
-             onClick={handleSyncData}
-             disabled={isSeeding}
-             className={`flex items-center gap-3 px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl transition-all ${
-               seedStatus === 'success' ? 'bg-emerald-500 text-white' : 
-               seedStatus === 'error' ? 'bg-rose-500 text-white' :
-               'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:scale-105'
-             }`}
+             onClick={() => setShowProductModal(true)}
+             className="flex items-center gap-3 px-8 py-4 bg-amber-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl hover:scale-105 transition-all"
           >
-             {isSeeding ? <RefreshCcw className="w-4 h-4 animate-spin" /> : 
-              seedStatus === 'success' ? <Check className="w-4 h-4" /> : 
-              <RefreshCcw className="w-4 h-4" />}
-             {isSeeding ? 'Syncing...' : seedStatus === 'success' ? 'Cloud Synced' : 'Sync Cloud Data'}
+             <Package className="w-4 h-4" />
+             Upload Product
           </button>
           <button 
              onClick={() => navigate('/creator-dashboard')}
@@ -88,6 +130,115 @@ export default function MentorDashboard() {
           </button>
         </div>
       </section>
+
+      {/* Product Upload Modal */}
+      <AnimatePresence>
+        {showProductModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }}
+              onClick={() => setShowProductModal(false)}
+              className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[40px] p-10 border border-slate-200 dark:border-white/10 shadow-2xl"
+            >
+              <button 
+                onClick={() => setShowProductModal(false)}
+                className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+
+              <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-8">
+                List a <span className="text-amber-500">Masterpiece</span>
+              </h2>
+
+              <form onSubmit={handleProductUpload} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Product Name</label>
+                  <input 
+                    required
+                    type="text"
+                    className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-6 py-4 dark:text-white"
+                    placeholder="e.g. Handmade Silk Scarf"
+                    value={productData.name}
+                    onChange={(e) => setProductData({...productData, name: e.target.value})}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Price (₹)</label>
+                    <input 
+                      required
+                      type="number"
+                      className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-6 py-4 dark:text-white"
+                      placeholder="1200"
+                      value={productData.price}
+                      onChange={(e) => setProductData({...productData, price: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Category</label>
+                    <select 
+                      required
+                      className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-6 py-4 dark:text-white appearance-none"
+                      value={productData.category}
+                      onChange={(e) => setProductData({...productData, category: e.target.value})}
+                    >
+                      <option value="">Select...</option>
+                      <option value="textile">Textile</option>
+                      <option value="pottery">Pottery</option>
+                      <option value="painting">Painting</option>
+                      <option value="jewelry">Jewelry</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Description</label>
+                  <textarea 
+                    required
+                    rows={3}
+                    className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-6 py-4 dark:text-white"
+                    placeholder="The story behind this artifact..."
+                    value={productData.description}
+                    onChange={(e) => setProductData({...productData, description: e.target.value})}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Product Image</label>
+                  <label className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-3xl bg-slate-50 dark:bg-white/2 cursor-pointer hover:bg-slate-100 dark:hover:bg-white/5 transition-all">
+                    <Upload className="w-8 h-8 text-slate-400 mb-2" />
+                    <span className="text-[10px] font-black text-slate-500 uppercase">{productImage ? productImage.name : 'Choose File'}</span>
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      accept="image/*" 
+                      onChange={(e) => setProductImage(e.target.files ? e.target.files[0] : null)}
+                    />
+                  </label>
+                </div>
+
+                <button 
+                  disabled={isUploading}
+                  type="submit"
+                  className="w-full bg-amber-500 text-white py-5 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-amber-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
+                >
+                  {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Launch Product'}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Stats */}
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

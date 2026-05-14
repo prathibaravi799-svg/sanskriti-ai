@@ -6,14 +6,46 @@
       "type": "object",
       "properties": {
         "uid": { "type": "string" },
+        "name": { "type": "string" },
         "email": { "type": "string" },
-        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["explorer", "artisan", "admin"] },
+        "interests": { "type": "array", "items": { "type": "string" } },
         "photoURL": { "type": "string" },
         "wishlist": { "type": "array", "items": { "type": "string" } },
-        "cart": { "type": "array", "items": { "type": "object" } },
+        "exploredStates": { "type": "array", "items": { "type": "string" } },
         "enrolledClasses": { "type": "array", "items": { "type": "string" } },
         "achievements": { "type": "array", "items": { "type": "string" } },
-        "preferences": { "type": "array", "items": { "type": "string" } }
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "ArtisanApplication": {
+      "title": "Artisan Application",
+      "description": "Form for becoming a mentor/artisan",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "specialization": { "type": "string" },
+        "experience": { "type": "string" },
+        "state": { "type": "string" },
+        "district": { "type": "string" },
+        "description": { "type": "string" },
+        "governmentIdUrl": { "type": "string" },
+        "portfolioImages": { "type": "array", "items": { "type": "string" } },
+        "sampleVideoUrl": { "type": "string" },
+        "verificationStatus": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "submittedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Cart": {
+      "title": "Shopping Cart",
+      "description": "User shopping cart data",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "items": { "type": "array", "items": { "type": "object" } },
+        "totalPrice": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       }
     },
     "Artist": {
@@ -204,6 +236,8 @@
   },
   "firestore": {
     "users": { "schema": "User", "description": "Manage user accounts" },
+    "artisanApplications": { "schema": "ArtisanApplication", "description": "Artisan verification forms" },
+    "carts": { "schema": "Cart", "description": "User shopping carts" },
     "artists": { "schema": "Artist", "description": "Artist master directory" },
     "products": { "schema": "Product", "description": "Marketplace products" },
     "bookings": { "schema": "Booking", "description": "Live session enrollments" },

@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import TrendingSection from '../components/TrendingSection';
 import ProgressTracker from '../components/ProgressTracker';
+import RecommendationsSection from '../components/RecommendationsSection';
 
 export default function Home() {
   const { t } = useLanguage();
@@ -91,6 +92,10 @@ export default function Home() {
       </section>
 
       {/* Progress Section */}
+      <section className="max-w-7xl mx-auto px-6">
+        <RecommendationsSection />
+      </section>
+
       <section className="max-w-7xl mx-auto px-6">
         <ProgressTracker />
       </section>

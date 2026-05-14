@@ -1,27 +1,43 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { onAuthStateChanged, User as FirebaseUser, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
+import { 
+  onAuthStateChanged, 
+  User as FirebaseUser, 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  signOut,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile as updateFirebaseProfile
+} from 'firebase/auth';
+import { doc, getDoc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '../firebase/config';
 import { Review } from '../data/products';
+
+export type UserRole = 'explorer' | 'artisan' | 'admin';
 
 interface UserProfile {
   uid: string;
   email: string | null;
-  displayName: string | null;
+  name: string | null;
+  role: UserRole;
+  interests: string[];
   photoURL: string | null;
   wishlist: string[];
-  cart: { id: string; quantity: number }[];
   exploredStates: string[];
   enrolledClasses: string[];
   achievements: string[];
+  createdAt: any;
 }
 
 interface UserContextType {
   user: FirebaseUser | null;
   profile: UserProfile | null;
   loading: boolean;
-  login: () => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
+  signupWithEmail: (email: string, pass: string, name: string) => Promise<void>;
+  loginWithEmail: (email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   exploredStates: string[];
   toggleExplored: (stateId: string) => void;
   wishlist: string[];
@@ -53,7 +69,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return saved ? JSON.parse(saved) : {};
   });
 
-  const [streak, setStreak] = useState(() => {
+  const [streak] = useState(() => {
     const saved = localStorage.getItem('sanskriti-streak');
     const lastVisit = localStorage.getItem('sanskriti-last-visit');
     const today = new Date().toDateString();
@@ -91,7 +107,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Auth Listener
   useEffect(() => {
-    return onAuthStateChanged(auth, async (u) => {
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
       setUser(u);
       if (u) {
         const userDoc = doc(db, 'users', u.uid);
@@ -101,13 +117,15 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const newProfile: UserProfile = {
             uid: u.uid,
             email: u.email,
-            displayName: u.displayName,
+            name: u.displayName,
+            role: 'explorer', // default
+            interests: [],
             photoURL: u.photoURL,
             wishlist: [],
-            cart: [],
             exploredStates: [],
             enrolledClasses: [],
-            achievements: []
+            achievements: [],
+            createdAt: serverTimestamp()
           };
           await setDoc(userDoc, newProfile);
           setProfile(newProfile);
@@ -115,56 +133,71 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setProfile(snapshot.data() as UserProfile);
         }
 
-        // Real-time sync
-        onSnapshot(userDoc, (doc) => {
+        // Real-time sync for profile and cart
+        const unsubProfile = onSnapshot(userDoc, (doc) => {
           if (doc.exists()) {
             const data = doc.data() as UserProfile;
             setProfile(data);
             setWishlist(data.wishlist || []);
-            setCart(data.cart || []);
             setExploredStates(data.exploredStates || []);
           }
         });
+
+        const cartDoc = doc(db, 'carts', u.uid);
+        const unsubCart = onSnapshot(cartDoc, (doc) => {
+          if (doc.exists()) {
+            setCart(doc.data().items || []);
+          }
+        });
+
+        return () => {
+          unsubProfile();
+          unsubCart();
+        };
       } else {
         setProfile(null);
-        // Fallback to local storage if not logged in
-        const savedExp = localStorage.getItem('sanskriti-explored');
-        const savedWish = localStorage.getItem('sanskriti-wishlist');
-        const savedCart = localStorage.getItem('sanskriti-cart');
-        setExploredStates(savedExp ? JSON.parse(savedExp) : []);
-        setWishlist(savedWish ? JSON.parse(savedWish) : []);
-        setCart(savedCart ? JSON.parse(savedCart) : []);
+        setExploredStates([]);
+        setWishlist([]);
+        setCart([]);
       }
       setLoading(false);
     });
+
+    return () => unsubscribe();
   }, []);
 
-  const login = async () => {
-    try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-    } catch (error: any) {
-      if (error.code === 'auth/popup-closed-by-user') {
-        console.log('Login popup closed by user');
-        return;
-      }
-      console.error('Login error:', error);
-      throw error;
-    }
+  const loginWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+  };
+
+  const signupWithEmail = async (email: string, pass: string, name: string) => {
+    const res = await createUserWithEmailAndPassword(auth, email, pass);
+    await updateFirebaseProfile(res.user, { displayName: name });
+    
+    const newProfile: UserProfile = {
+      uid: res.user.uid,
+      email,
+      name,
+      role: 'explorer',
+      interests: [],
+      photoURL: null,
+      wishlist: [],
+      exploredStates: [],
+      enrolledClasses: [],
+      achievements: [],
+      createdAt: serverTimestamp()
+    };
+    await setDoc(doc(db, 'users', res.user.uid), newProfile);
+  };
+
+  const loginWithEmail = async (email: string, pass: string) => {
+    await signInWithEmailAndPassword(auth, email, pass);
   };
 
   const logout = async () => {
     await signOut(auth);
   };
-
-  // Sync Local Storage as fallback
-  useEffect(() => {
-    if (!user) {
-      localStorage.setItem('sanskriti-explored', JSON.stringify(exploredStates));
-      localStorage.setItem('sanskriti-wishlist', JSON.stringify(wishlist));
-      localStorage.setItem('sanskriti-cart', JSON.stringify(cart));
-    }
-  }, [exploredStates, wishlist, cart, user]);
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
     if (user) {
@@ -173,7 +206,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const toggleExplored = (stateId: string) => {
-    const newExplored = exploredStates.includes(stateId) ? exploredStates : [...exploredStates, stateId];
+    const newExplored = exploredStates.includes(stateId) ? exploredStates.filter(id => id !== stateId) : [...exploredStates, stateId];
     setExploredStates(newExplored);
     if (user) updateProfile({ exploredStates: newExplored });
   };
@@ -186,24 +219,34 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (user) updateProfile({ wishlist: newWishlist });
   };
 
-  const addToCart = (productId: string) => {
-    let newCart = [...cart];
-    const existing = newCart.find(item => item.id === productId);
-    if (existing) {
-      newCart = newCart.map(item => 
-        item.id === productId ? { ...item, quantity: item.quantity + 1 } : item
-      );
-    } else {
-      newCart.push({ id: productId, quantity: 1 });
+  const addToCart = async (productId: string) => {
+    if (user) {
+      const cartRef = doc(db, 'carts', user.uid);
+      const snapshot = await getDoc(cartRef);
+      let items = snapshot.exists() ? snapshot.data().items || [] : [];
+      
+      const existing = items.find((item: any) => item.id === productId);
+      if (existing) {
+        items = items.map((item: any) => 
+          item.id === productId ? { ...item, quantity: item.quantity + 1 } : item
+        );
+      } else {
+        items.push({ id: productId, quantity: 1 });
+      }
+      
+      await setDoc(cartRef, { userId: user.uid, items, updatedAt: serverTimestamp() });
     }
-    setCart(newCart);
-    if (user) updateProfile({ cart: newCart });
   };
 
-  const removeFromCart = (productId: string) => {
-    const newCart = cart.filter(item => item.id !== productId);
-    setCart(newCart);
-    if (user) updateProfile({ cart: newCart });
+  const removeFromCart = async (productId: string) => {
+    if (user) {
+      const cartRef = doc(db, 'carts', user.uid);
+      const snapshot = await getDoc(cartRef);
+      if (snapshot.exists()) {
+        const items = (snapshot.data().items || []).filter((item: any) => item.id !== productId);
+        await setDoc(cartRef, { items, updatedAt: serverTimestamp() }, { merge: true });
+      }
+    }
   };
 
   const addReview = (productId: string, reviewData: Omit<Review, 'id' | 'date'>) => {
@@ -212,11 +255,14 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id: `r-${Date.now()}`,
       date: new Date().toISOString().split('T')[0]
     };
-    setLocalReviews(prev => ({
-      ...prev,
-      [productId]: [newReview, ...(prev[productId] || [])]
-    }));
-    // Note: In production, this would go to a global reviews collection
+    setLocalReviews(prev => {
+      const updated = {
+        ...prev,
+        [productId]: [newReview, ...(prev[productId] || [])]
+      };
+      localStorage.setItem('sanskriti-reviews', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const isStateExplored = (stateId: string) => exploredStates.includes(stateId);
@@ -226,8 +272,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user,
       profile,
       loading,
-      login,
+      loginWithGoogle,
+      signupWithEmail,
+      loginWithEmail,
       logout,
+      updateProfile,
       exploredStates, 
       toggleExplored, 
       wishlist,

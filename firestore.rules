@@ -1,131 +1,55 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Default deny
-    /*
-    match /{document=**} {
-      allow read, write: if false;
-    }
-    */
-
-    // Allow test connection
-    match /test/connection {
-      allow read: if true;
+    // Helper functionality
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // Helper functions
-    function isSignedIn() { return request.auth != null; }
-    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
-    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
-    function incoming() { return request.resource.data; }
-    function existing() { return resource.data; }
-
-    // User Profile Rules
-    match /users/{userId} {
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if isOwner(userId) && isValidUser(incoming());
-      allow update: if isOwner(userId) && isValidUser(incoming()) && (
-        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'wishlist', 'cart', 'enrolledClasses', 'achievements', 'preferences'])
-      );
-    }
-
-    function isValidUser(data) {
-      return data.uid is string && data.email is string && 
-             data.displayName is string && data.displayName.size() <= 100;
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
     // Artist Profile Rules
-    match /artists/{artistId} {
-      allow get, list: if true;
-      allow create, update: if isSignedIn() && (isOwner(artistId) || (isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid))));
+    match /artists/{id=**} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // User Profile Rules
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId);
     }
 
     // Product Rules
-    match /products/{productId} {
+    match /products/{id=**} {
       allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow write: if isSignedIn();
     }
 
-    // Booking Rules
-    match /bookings/{bookingId} {
-      allow get: if isSignedIn() && (isOwner(existing().userId) || isOwner(existing().artistId));
-      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.artistId == request.auth.uid);
-      allow create: if isSignedIn() && isOwner(incoming().userId) && isValidBooking(incoming());
-      allow update: if isSignedIn() && (isOwner(existing().userId) || isOwner(existing().artistId)) && (
-        incoming().diff(existing()).affectedKeys().hasOnly(['status'])
-      );
+    // Application Rules
+    match /artisanApplications/{id=**} {
+      allow read, write: if isSignedIn();
     }
 
-    function isValidBooking(data) {
-      return data.userId is string && data.artistId is string && data.sessionId is string;
-    }
+    // Generic fallback for other collections mentioned in blueprint
+    match /stories/{id=**} { allow read: if true; allow write: if isSignedIn(); }
+    match /carts/{id=**} { allow read, write: if isSignedIn(); }
+    match /bookings/{id=**} { allow read, write: if isSignedIn(); }
+    match /liveSessions/{id=**} { allow read, write: if isSignedIn(); }
+    match /videos/{id=**} { allow read, write: if isSignedIn(); }
+    match /reviews/{id=**} { allow read: if true; allow write: if isSignedIn(); }
+    match /achievements/{id=**} { allow read, write: if isSignedIn(); }
+    match /chats/{id=**} { allow read, write: if isSignedIn(); }
+    match /folklore/{id=**} { allow read: if true; allow write: if isSignedIn(); }
+    match /chapters/{id=**} { allow read: if true; allow write: if isSignedIn(); }
+    match /streams/{id=**} { allow read: if true; allow write: if isSignedIn(); }
+    match /comments/{id=**} { allow read: if true; allow write: if isSignedIn(); }
 
-    // Live Sessions
-    match /liveSessions/{sessionId} {
+    // Test connection
+    match /test/connection {
       allow read: if true;
-      allow create, update, delete: if isSignedIn() && (isOwner(incoming().artistId) || isAdmin());
-    }
-
-    // Videos
-    match /videos/{videoId} {
-      allow read: if true;
-      allow create, update, delete: if isSignedIn() && (isOwner(incoming().artistId) || isAdmin());
-    }
-
-    // Reviews
-    match /reviews/{reviewId} {
-      allow read: if true;
-      allow create: if isSignedIn() && isOwner(incoming().userId);
-      allow update, delete: if isSignedIn() && isOwner(existing().userId);
-    }
-
-    // Achievements
-    match /achievements/{achievementId} {
-      allow read: if isSignedIn() && isOwner(resource.data.userId);
-      allow create, update, delete: if isAdmin();
-    }
-
-    // Chats
-    match /chats/{chatId} {
-      allow read: if isSignedIn() && (request.auth.uid in resource.data.participants);
-      allow create: if isSignedIn() && (request.auth.uid in incoming().participants);
-      allow update: if isSignedIn() && (request.auth.uid in existing().participants);
-    }
-
-    // Folklore Stories
-    match /stories/{storyId} {
-      allow read: if true;
-      allow create: if isSignedIn() && isOwner(incoming().creatorId);
-      allow update, delete: if isSignedIn() && isOwner(existing().creatorId);
-    }
-
-    // Chapters
-    match /chapters/{chapterId} {
-      allow read: if true;
-      allow create, update, delete: if isSignedIn(); // Simplified for now
-    }
-
-    // Streams
-    match /streams/{streamId} {
-      allow read: if true;
-      allow create: if isSignedIn() && isOwner(incoming().creatorId);
-      allow update: if isSignedIn() && isOwner(existing().creatorId);
-    }
-
-    // Comments
-    match /comments/{commentId} {
-      allow read: if true;
-      allow create: if isSignedIn() && isOwner(incoming().userId);
-      allow update, delete: if isSignedIn() && isOwner(existing().userId);
-    }
-
-    // Admin check helper
-    function isAdmin() {
-      // In this applet, we don't have a specific admin collection yet,
-      // but we can add one or use a specific email if needed.
-      // For now, we'll allow a specific hardcoded email as a bypass or simply check a collection
-      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
   }
 }

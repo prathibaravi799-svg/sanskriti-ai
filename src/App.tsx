@@ -19,6 +19,9 @@ import MediaLibrary from './pages/MediaLibrary';
 import AIContentGenerator from './pages/AIContentGenerator';
 import VideoEditor from './pages/VideoEditor';
 import LiveStreamingRoom from './pages/LiveStreamingRoom';
+import AuthPage from './pages/AuthPage';
+import OnboardingPage from './pages/OnboardingPage';
+import ArtisanVerificationPage from './pages/ArtisanVerificationPage';
 import { LanguageProvider } from './context/LanguageContext';
 import { UserProvider } from './context/UserContext';
 import Chatbot from './components/Chatbot';
@@ -51,6 +54,9 @@ export default function App() {
                 <Route path="/creator/ai-lab" element={<AIContentGenerator />} />
                 <Route path="/creator/video-editor" element={<VideoEditor />} />
                 <Route path="/live/studio" element={<LiveStreamingRoom />} />
+                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/onboarding" element={<OnboardingPage />} />
+                <Route path="/artisan-verification" element={<ArtisanVerificationPage />} />
               </Routes>
             </main>
 
